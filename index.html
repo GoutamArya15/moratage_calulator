@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mortgage Calculator</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="styles.css"> <!-- Optional external CSS file for styles -->
+    <style>
+        .error {
+            color: red;
+        }
+        .calculator_box {
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            width: 300px;
+        }
+        .calcButton {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="calculator_box">
+        <div class="calculator_form">
+            <form id="mortgage_calculator">
+                <label for="propertyType">Property Type</label>
+                <select id="propertyType" class="native">
+                    <option value="47b87c36">Private Property</option>
+                    <option value="a7f3a4d1">HDB</option>
+                </select>
+                <br><br>
+                <label for="buildingStatus">Building Status</label>
+                <select id="buildingStatus" class="native">
+                    <option value="6caf4631">Completed</option>
+                    <option value="48d3556e" disabled>Under Construction - Coming Soon</option>
+                </select>
+                <br><br>
+                <label for="inCost">Loan Amount</label>
+                <input type="text" name="amount" class="calcInput" id="inCost" placeholder="Enter Loan Amount ($)" /><br><br>
+                <label for="inInterest">Interest Rate</label>
+                <input type="text" name="interest" class="calcInput" id="inInterest" placeholder="Enter Interest (%)" /><br><br>
+                <label for="inTerm">Loan (Years)</label>
+                <input type="text" class="calcInput" name="time" id="inTerm" placeholder="Length of Loan (years)" />
+                <button type="button" class="calcButton" id="btnCalculate">Calculate</button>
+                <button type="button" class="calcButton" id="btnClear">Clear</button>
+            </form>
+        </div>
+        <div class="calculator_result" style="display: none;">
+            <h4>Your Mortgage Summary</h4>
+            <p class="calcAnswer"><b>Total Monthly Payment</b>: <span id="outMonthly">Please enter the values in the form.</span></p>
+            <p class="calcAnswer"><b>Total Principal Paid</b>: <span id="outPrincipal">N/A</span></p>
+            <p class="calcAnswer"><b>Total Interest Paid</b>: <span id="outInterest">N/A</span></p>
+            <table class="calc_result_table">
+                <thead>
+                    <tr>
+                        <td>Year</td>
+                        <td>Principal Paid</td>
+                        <td>Interest Paid</td>
+                        <td>EMI Paid</td>
+                    </tr>
+                </thead>
+                <tbody id="yearlyBreakdown"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.21.0/jquery.validate.min.js"
+        integrity="sha512-KFHXdr2oObHKI9w4Hv1XPKc898mE4kgYx58oqsc/JqqdLMDI4YjOLzom+EMlW8HFUd0QfjfAvxSL6sEq/a42fQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        // Validation rules
+        jQuery("#mortgage_calculator").validate({
+            rules: {
+                amount: {
+                    required: true,
+                    min: 100000,
+                    max: 999999999
+                },
+                interest: {
+                    required: true,
+                    min: 0.5,
+                    max: 10
+                },
+                time: {
+                    required: true,
+                    min: 5,
+                    max: 35,
+                }
+            },
+            messages: {
+                amount: {
+                    required: "Please Enter the Value!",
+                    max: "Your loan amount must be less than $999,999,999",
+                    min: "Your loan amount must be at least $100,000",
+                },
+                interest: {
+                    required: "Please Enter the Value!",
+                    max: "Your interest rate must be less than 10%.",
+                    min: "Your interest rate must be at least 0.5%.",
+                },
+                time: {
+                    required: "Please Enter the Value!",
+                    max: "Your loan tenure cannot be more than 35 years.",
+                    min: "Your loan tenure cannot be less than 5 years.",
+                }
+            },
+            submitHandler: function (form) {
+                // Prevent default form submission
+                event.preventDefault();
+                calculateMortgage();
+            }
+        });
+
+        document.getElementById('btnCalculate').addEventListener('click', function () {
+            if ($("#mortgage_calculator").valid()) {
+                calculateMortgage();
+            }
+        });
+
+        document.getElementById('btnClear').addEventListener('click', function () {
+            document.getElementById('mortgage_calculator').reset();
+            document.getElementById('yearlyBreakdown').innerHTML = '';
+            document.getElementById('outMonthly').textContent = 'Please enter the values in the form.';
+            document.getElementById('outPrincipal').textContent = 'N/A';
+            document.getElementById('outInterest').textContent = 'N/A';
+            $('.calculator_result').hide();
+        });
+
+        function calculateMortgage() {
+            const principal = parseFloat(document.getElementById('inCost').value);
+            const annualInterestRate = parseFloat(document.getElementById('inInterest').value);
+            const loanTenureYears = parseFloat(document.getElementById('inTerm').value);
+            const loanTenureMonths = loanTenureYears * 12;
+
+            const emi = calculateEMI(principal, annualInterestRate, loanTenureMonths);
+            const yearlyBreakdown = generateYearlyBreakdown(principal, annualInterestRate, loanTenureMonths);
+
+            document.getElementById('outMonthly').textContent = `$${emi.toFixed(2)}`;
+            document.getElementById('outPrincipal').textContent = `$${yearlyBreakdown.totalPrincipal.toFixed(2)}`;
+            document.getElementById('outInterest').textContent = `$${yearlyBreakdown.totalInterest.toFixed(2)}`;
+
+            displayYearlyBreakdown(yearlyBreakdown.breakdown);
+            $('.calculator_result').show();
+        }
+
+        function calculateEMI(principal, annualInterestRate, loanTenureMonths) {
+            const monthlyInterestRate = annualInterestRate / 12 / 100;
+
+            if (monthlyInterestRate === 0) {
+                return principal / loanTenureMonths;
+            } else {
+                return (principal * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, loanTenureMonths)) /
+                    (Math.pow(1 + monthlyInterestRate, loanTenureMonths) - 1);
+            }
+        }
+
+        function generateYearlyBreakdown(principal, annualInterestRate, loanTenureMonths) {
+            const emi = calculateEMI(principal, annualInterestRate, loanTenureMonths);
+            const monthlyInterestRate = annualInterestRate / 12 / 100;
+
+            let totalPaid = 0;
+            let remainingPrincipal = principal;
+            const yearlyData = {};
+
+            for (let month = 1; month <= loanTenureMonths; month++) {
+                const interestPayment = remainingPrincipal * monthlyInterestRate;
+                const principalPayment = emi - interestPayment;
+                remainingPrincipal -= principalPayment;
+                totalPaid += emi;
+                const year = Math.ceil(month / 12);
+
+                if (!yearlyData[year]) {
+                    yearlyData[year] = { principal: 0, interest: 0, total: 0 };
+                }
+                yearlyData[year].principal += principalPayment;
+                yearlyData[year].interest += interestPayment;
+                yearlyData[year].total += emi;
+            }
+
+            return {
+                totalPrincipal: Object.values(yearlyData).reduce((sum, data) => sum + data.principal, 0),
+                totalInterest: Object.values(yearlyData).reduce((sum, data) => sum + data.interest, 0),
+                breakdown: yearlyData
+            };
+        }
+
+        function displayYearlyBreakdown(yearlyBreakdown) {
+            const breakdownElement = document.getElementById('yearlyBreakdown');
+            breakdownElement.innerHTML = '';
+
+            for (const year in yearlyBreakdown) {
+                const data = yearlyBreakdown[year];
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${year}</td>
+                                 <td>$${data.principal.toFixed(2)}</td>
+                                 <td>$${data.interest.toFixed(2)}</td>
+                                 <td>$${data.total.toFixed(2)}</td>`;
+                breakdownElement.appendChild(row);
+            }
+        }
+    </script>
+</body>
+
+</html>
+
+
+
+<!-- 
+<script>
+    document.getElementById('btnCalculate').addEventListener('click', function () {
+        const principal = parseFloat(document.getElementById('inCost').value);
+        const annualInterestRate = parseFloat(document.getElementById('inInterest').value);
+        const loanTenureYears = parseFloat(document.getElementById('inTerm').value);
+        const loanTenureMonths = loanTenureYears * 12;
+
+        if (isNaN(principal) || isNaN(annualInterestRate) || isNaN(loanTenureYears) || principal <= 0 || annualInterestRate < 0 || loanTenureYears <= 0) {
+            alert("Please enter valid values.");
+            return;
+        }
+        const emi = calculateEMI(principal, annualInterestRate, loanTenureMonths);
+        const yearlyBreakdown = generateYearlyBreakdown(principal, annualInterestRate, loanTenureMonths);
+        document.getElementById('outMonthly').textContent = `$${emi.toFixed(2)}`;
+        document.getElementById('outPrincipal').textContent = `$${yearlyBreakdown.totalPrincipal.toFixed(2)}`;
+        document.getElementById('outInterest').textContent = `$${yearlyBreakdown.totalInterest.toFixed(2)}`;
+
+        displayYearlyBreakdown(yearlyBreakdown.breakdown);
+    });
+
+    function calculateEMI(principal, annualInterestRate, loanTenureMonths) {
+        const monthlyInterestRate = annualInterestRate / 12 / 100;
+
+        if (monthlyInterestRate === 0) {
+            return principal / loanTenureMonths;
+        } else {
+            return (principal  monthlyInterestRate  Math.pow(1 + monthlyInterestRate, loanTenureMonths)) /
+                (Math.pow(1 + monthlyInterestRate, loanTenureMonths) - 1);
+        }
+    }
+
+    function generateYearlyBreakdown(principal, annualInterestRate, loanTenureMonths) {
+        const emi = calculateEMI(principal, annualInterestRate, loanTenureMonths);
+        const monthlyInterestRate = annualInterestRate / 12 / 100;
+
+        let totalPaid = 0;
+        let remainingPrincipal = principal;
+
+        const yearlyData = {};
+
+        for (let month = 1; month <= loanTenureMonths; month++) {
+            const interestPayment = remainingPrincipal * monthlyInterestRate;
+            const principalPayment = emi - interestPayment;
+            remainingPrincipal -= principalPayment;
+            totalPaid += emi;
+            const year = Math.ceil(month / 12);
+
+            if (!yearlyData[year]) {
+                yearlyData[year] = { principal: 0, interest: 0, total: 0 };
+            }
+            yearlyData[year].principal += principalPayment;
+            yearlyData[year].interest += interestPayment;
+            yearlyData[year].total += emi;
+        }
+
+        return {
+            totalPrincipal: Object.values(yearlyData).reduce((sum, data) => sum + data.principal, 0),
+            totalInterest: Object.values(yearlyData).reduce((sum, data) => sum + data.interest, 0),
+            breakdown: yearlyData
+        };
+    }
+
+    function displayYearlyBreakdown(yearlyBreakdown) {
+        const breakdownElement = document.getElementById('yearlyBreakdown');
+        breakdownElement.innerHTML = '';
+
+        for (const year in yearlyBreakdown) {
+            const data = yearlyBreakdown[year];
+            const yearData = document.createElement('p');
+            yearData.className = 'calcAnswer';
+            yearData.innerHTML = `<b>Year ${year}:</b><br /> Total Principal Paid: $${data.principal.toFixed(2)}<br />Total Interest Paid: $${data.interest.toFixed(2)}<br />Total EMI Paid: $${data.total.toFixed(2)}`;
+            breakdownElement.appendChild(yearData);
+        }
+    }
+</script>
+
+-->
