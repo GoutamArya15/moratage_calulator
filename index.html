@@ -143,8 +143,8 @@
             const yearlyBreakdown = generateYearlyBreakdown(principal, annualInterestRate, loanTenureMonths);
 
             document.getElementById('outMonthly').textContent = `$${emi.toFixed(2)}`;
-            document.getElementById('outPrincipal').textContent = `$${yearlyBreakdown.totalPrincipal.toFixed(2)}`;
-            document.getElementById('outInterest').textContent = `$${yearlyBreakdown.totalInterest.toFixed(2)}`;
+            document.getElementById('outPrincipal').textContent = `$${yearlyBreakdown.totalPrincipal.toFixed(0)}`;
+            document.getElementById('outInterest').textContent = `$${yearlyBreakdown.totalInterest.toFixed(0)}`;
 
             displayYearlyBreakdown(yearlyBreakdown.breakdown);
             $('.calculator_result').show();
@@ -199,9 +199,9 @@
                 const data = yearlyBreakdown[year];
                 const row = document.createElement('tr');
                 row.innerHTML = `<td>${year}</td>
-                                 <td>$${data.principal.toFixed(2)}</td>
-                                 <td>$${data.interest.toFixed(2)}</td>
-                                 <td>$${data.total.toFixed(2)}</td>`;
+                                 <td>$${data.principal.toFixed(0)}</td>
+                                 <td>$${data.interest.toFixed(0)}</td>
+                                 <td>$${data.total.toFixed(0)}</td>`;
                 breakdownElement.appendChild(row);
             }
         }
@@ -212,81 +212,3 @@
 
 
 
-<!-- 
-<script>
-    document.getElementById('btnCalculate').addEventListener('click', function () {
-        const principal = parseFloat(document.getElementById('inCost').value);
-        const annualInterestRate = parseFloat(document.getElementById('inInterest').value);
-        const loanTenureYears = parseFloat(document.getElementById('inTerm').value);
-        const loanTenureMonths = loanTenureYears * 12;
-
-        if (isNaN(principal) || isNaN(annualInterestRate) || isNaN(loanTenureYears) || principal <= 0 || annualInterestRate < 0 || loanTenureYears <= 0) {
-            alert("Please enter valid values.");
-            return;
-        }
-        const emi = calculateEMI(principal, annualInterestRate, loanTenureMonths);
-        const yearlyBreakdown = generateYearlyBreakdown(principal, annualInterestRate, loanTenureMonths);
-        document.getElementById('outMonthly').textContent = `$${emi.toFixed(2)}`;
-        document.getElementById('outPrincipal').textContent = `$${yearlyBreakdown.totalPrincipal.toFixed(2)}`;
-        document.getElementById('outInterest').textContent = `$${yearlyBreakdown.totalInterest.toFixed(2)}`;
-
-        displayYearlyBreakdown(yearlyBreakdown.breakdown);
-    });
-
-    function calculateEMI(principal, annualInterestRate, loanTenureMonths) {
-        const monthlyInterestRate = annualInterestRate / 12 / 100;
-
-        if (monthlyInterestRate === 0) {
-            return principal / loanTenureMonths;
-        } else {
-            return (principal  monthlyInterestRate  Math.pow(1 + monthlyInterestRate, loanTenureMonths)) /
-                (Math.pow(1 + monthlyInterestRate, loanTenureMonths) - 1);
-        }
-    }
-
-    function generateYearlyBreakdown(principal, annualInterestRate, loanTenureMonths) {
-        const emi = calculateEMI(principal, annualInterestRate, loanTenureMonths);
-        const monthlyInterestRate = annualInterestRate / 12 / 100;
-
-        let totalPaid = 0;
-        let remainingPrincipal = principal;
-
-        const yearlyData = {};
-
-        for (let month = 1; month <= loanTenureMonths; month++) {
-            const interestPayment = remainingPrincipal * monthlyInterestRate;
-            const principalPayment = emi - interestPayment;
-            remainingPrincipal -= principalPayment;
-            totalPaid += emi;
-            const year = Math.ceil(month / 12);
-
-            if (!yearlyData[year]) {
-                yearlyData[year] = { principal: 0, interest: 0, total: 0 };
-            }
-            yearlyData[year].principal += principalPayment;
-            yearlyData[year].interest += interestPayment;
-            yearlyData[year].total += emi;
-        }
-
-        return {
-            totalPrincipal: Object.values(yearlyData).reduce((sum, data) => sum + data.principal, 0),
-            totalInterest: Object.values(yearlyData).reduce((sum, data) => sum + data.interest, 0),
-            breakdown: yearlyData
-        };
-    }
-
-    function displayYearlyBreakdown(yearlyBreakdown) {
-        const breakdownElement = document.getElementById('yearlyBreakdown');
-        breakdownElement.innerHTML = '';
-
-        for (const year in yearlyBreakdown) {
-            const data = yearlyBreakdown[year];
-            const yearData = document.createElement('p');
-            yearData.className = 'calcAnswer';
-            yearData.innerHTML = `<b>Year ${year}:</b><br /> Total Principal Paid: $${data.principal.toFixed(2)}<br />Total Interest Paid: $${data.interest.toFixed(2)}<br />Total EMI Paid: $${data.total.toFixed(2)}`;
-            breakdownElement.appendChild(yearData);
-        }
-    }
-</script>
-
--->
